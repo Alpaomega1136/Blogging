@@ -1,0 +1,139 @@
+body{
+  margin: 0px;
+  background-color: rgba(154, 191, 243, 0.813);
+}
+
+main{
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+/*navigation place*/
+.navbar{
+  background-color: hsl(236, 100%, 25%);
+  display: flex;
+  align-items: center; /*Inti pembuat kanan dan kiri*/
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.brand, .homebutton{
+  color: white;
+  margin: 0;
+  font-family:'Lucida Bright', serif;
+  font-weight: 1000;
+  font-size: 1.8rem;
+}
+
+.nav-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+
+.nav-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 8px 18px;
+  border-radius: 999px;
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+
+  color: #ffffff;
+  text-decoration: none;
+
+  backdrop-filter: blur(6px);
+
+  background: rgba(116, 120, 237, 0.75);
+  transition: 
+    background 0.25s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.nav-links a:hover {
+  background: rgba(70, 75, 200, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+
+
+/*home button*/
+.homebutton{
+  margin-left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.homebutton a{
+  color: rgb(255, 255, 255);
+  text-decoration: none;
+  padding: 15px;
+  display: block;
+  text-align: center;
+}
+
+.homebutton img{
+  display: block;
+}
+
+/*Search bar*/
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 600px;
+  margin: 0 2rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.8rem 3rem 0.8rem 1.5rem;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #111; 
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.search-input:focus {
+  outline: none;
+  background: #ffffff;
+  color: #000; 
+  box-shadow: 0 0 12px rgba(255,255,255,0.3);
+}
+
+
+.search-btn {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+.search-input::placeholder {
+  color: #666;
+}
+
