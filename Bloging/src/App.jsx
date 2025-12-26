@@ -1,13 +1,28 @@
 // src/App.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Box,
+  Button,
+  CssBaseline,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  GlobalStyles,
+  Stack,
+  TextField,
+  ThemeProvider,
+  Typography,
+  createTheme,
+} from "@mui/material";
+import { Link, Route, Routes } from "react-router-dom";
 import { initialPosts } from "./data/posts";
+import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
+import PostDetail from "./pages/PostDetail";
 
 export default function App() {
-  // state posts
-  const [posts] = useState(initialPosts);
-
-  // state search
+  const [posts, setPosts] = useState(initialPosts);
   const [query, setQuery] = useState("");
   const [isDark, setIsDark] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,13 +36,6 @@ export default function App() {
   });
   const [fileInputKey, setFileInputKey] = useState(0);
 
-  // handler search (sementara hanya filter client-side)
-  const handleSubmitSearch = (e) => {
-    e.preventDefault();
-    console.log("Search query:", query);
-  };
-
-  // filter posts berdasarkan query
   const filteredPosts = posts.filter((post) =>
     post.title.toLowerCase().includes(query.toLowerCase())
   );
@@ -41,188 +49,236 @@ export default function App() {
     }
   }, [currentPage, totalPages]);
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = isDark ? "dark" : "light";
-  }, [isDark]);
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode: isDark ? "dark" : "light",
+          primary: {
+            main: "#2fb4e6",
+            contrastText: "#06233a",
+          },
+          secondary: {
+            main: isDark ? "#1f2a3d" : "#7e95bf",
+          },
+          text: {
+            primary: isDark ? "#e3e9f4" : "#0d1b3b",
+            secondary: isDark ? "#b8c5d8" : "#27406a",
+          },
+          background: {
+            default: isDark ? "#0b111c" : "#bde6f7",
+            paper: isDark ? "#0f1626" : "#ffffff",
+          },
+        },
+        typography: {
+          fontFamily: '"Nunito Sans", "Segoe UI", sans-serif',
+          h5: {
+            fontFamily: '"Fraunces", "Times New Roman", serif',
+            fontWeight: 800,
+          },
+          h4: {
+            fontFamily: '"Fraunces", "Times New Roman", serif',
+            fontWeight: 800,
+          },
+        },
+      }),
+    [isDark]
+  );
 
-  useEffect(() => {
-    document.body.style.overflow = isModalOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isModalOpen]);
+  const homeElement = (
+    <Home
+      posts={pagedPosts}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={setCurrentPage}
+    />
+  );
+
+  const handleSubmitSearch = (event) => {
+    event.preventDefault();
+  };
+
+  const handleQueryChange = (event) => {
+    setQuery(event.target.value);
+    setCurrentPage(1);
+  };
 
   const handleSubmitDraft = (event) => {
     event.preventDefault();
-    console.log("Draft post:", draft);
+    const title = draft.title.trim();
+    const author = draft.author.trim();
+    const content = draft.content.trim();
+
+    if (!title || !author || !content) {
+      return;
+    }
+
+    const newPost = {
+      id: Date.now().toString(),
+      title,
+      author,
+      content,
+      createdAt: new Date().toISOString().slice(0, 10),
+      tags: [],
+      attachment: draft.attachment ? draft.attachment.name : null,
+    };
+
+    setPosts((prevPosts) => [newPost, ...prevPosts]);
+    setCurrentPage(1);
     setDraft({ title: "", author: "", content: "", attachment: null });
     setFileInputKey((prev) => prev + 1);
     setIsModalOpen(false);
   };
 
+  const lightBackground =
+    "radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.35), transparent 45%),\n" +
+    "radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.28), transparent 50%),\n" +
+    "linear-gradient(180deg, #bde6f7 0%, #97cdeb 100%)";
+  const darkBackground =
+    "radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.04), transparent 45%),\n" +
+    "radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.03), transparent 55%),\n" +
+    "linear-gradient(180deg, #070b13 0%, #0b121f 100%)";
+
   return (
-    <>
-      <nav className="navbar">
-        <div className="brand-group">
-          <div className="homebutton">
-            <a href="/">Blogging.</a>
-          </div>
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={() => setIsDark((prev) => !prev)}
-            aria-pressed={isDark}
-          >
-            {isDark ? "Light Mode" : "Dark Mode"}
-          </button>
-        </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <GlobalStyles
+        styles={{
+          body: {
+            background: isDark ? darkBackground : lightBackground,
+            minHeight: "100vh",
+          },
+          "#root": {
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+          },
+          a: {
+            color: "inherit",
+          },
+        }}
+      />
 
-        <form className="search-container" onSubmit={handleSubmitSearch}>
-          <input
-            type="search"
-            className="search-input"
-            placeholder="Cari blog..."
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </form>
+      <Navbar
+        query={query}
+        onQueryChange={handleQueryChange}
+        onSubmitSearch={handleSubmitSearch}
+        onToggleTheme={() => setIsDark((prev) => !prev)}
+        isDark={isDark}
+        onOpenModal={() => setIsModalOpen(true)}
+      />
 
-        <ul className="nav-links">
-          <li>
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              aria-expanded={isModalOpen}
-              aria-controls="create-post-modal"
-            >
-              New Post
-            </button>
-          </li>
-        </ul>
-      </nav>
-
-      <div
-        className={`modal-overlay ${isModalOpen ? "open" : ""}`}
-        onClick={() => setIsModalOpen(false)}
-        aria-hidden={!isModalOpen}
+      <Dialog
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          component: "form",
+          onSubmit: handleSubmitDraft,
+          sx: {
+            borderRadius: 4,
+            backgroundColor: isDark ? "#0f1626" : "#f2f6ff",
+          },
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: "blur(12px)",
+            backgroundColor: isDark
+              ? "rgba(2, 4, 8, 0.75)"
+              : "rgba(7, 12, 24, 0.35)",
+          },
+        }}
       >
-        <section
-          id="create-post-modal"
-          className={`modal ${isModalOpen ? "open" : ""}`}
-          role="dialog"
-          aria-modal="true"
-          aria-hidden={!isModalOpen}
-          aria-labelledby="modal-title"
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setIsModalOpen(false);
-            }
-          }}
-        >
-          <header className="modal-header">
-            <h2 id="modal-title" className="modal-title">
-              Buat Post Baru
-            </h2>
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setIsModalOpen(false)}
-              aria-label="Close"
-            >
-              X
-            </button>
-          </header>
-
-          <form className="modal-form" onSubmit={handleSubmitDraft}>
-            <label className="modal-field">
-              <span>Judul</span>
-              <input
-                type="text"
-                className="modal-input"
-                placeholder="Masukkan judul post"
-                value={draft.title}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, title: event.target.value }))
-                }
-                required
-              />
-            </label>
-
-            <label className="modal-field">
-              <span>Author</span>
-              <input
-                type="text"
-                className="modal-input"
-                placeholder="Nama penulis"
-                value={draft.author}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, author: event.target.value }))
-                }
-                required
-              />
-            </label>
-
-            <label className="modal-field">
-              <span>Konten</span>
-              <textarea
-                className="modal-textarea"
-                placeholder="Tulis isi post di sini"
-                rows={6}
-                value={draft.content}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, content: event.target.value }))
-                }
-                required
-              />
-            </label>
-
-            <label className="modal-field">
-              <span>Attachment</span>
-              <input
-                key={fileInputKey}
-                type="file"
-                className="modal-input"
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    attachment: event.target.files?.[0] ?? null,
-                  }))
-                }
-              />
-              <small className="modal-hint">Opsional: lampirkan file.</small>
+        <DialogTitle sx={{ fontFamily: '"Fraunces", "Times New Roman", serif' }}>
+          Buat Post Baru
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Judul"
+              value={draft.title}
+              onChange={(event) =>
+                setDraft((prev) => ({ ...prev, title: event.target.value }))
+              }
+              required
+              fullWidth
+            />
+            <TextField
+              label="Author"
+              value={draft.author}
+              onChange={(event) =>
+                setDraft((prev) => ({ ...prev, author: event.target.value }))
+              }
+              required
+              fullWidth
+            />
+            <TextField
+              label="Konten"
+              value={draft.content}
+              onChange={(event) =>
+                setDraft((prev) => ({ ...prev, content: event.target.value }))
+              }
+              required
+              fullWidth
+              multiline
+              minRows={5}
+            />
+            <Stack spacing={1}>
+              <Button variant="outlined" component="label">
+                Attachment
+                <input
+                  key={fileInputKey}
+                  type="file"
+                  hidden
+                  onChange={(event) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      attachment: event.target.files?.[0] ?? null,
+                    }))
+                  }
+                />
+              </Button>
+              <Typography variant="caption" color="text.secondary">
+                Opsional: lampirkan file.
+              </Typography>
               {draft.attachment && (
-                <span className="modal-file">File: {draft.attachment.name}</span>
+                <Typography variant="body2">
+                  File: {draft.attachment.name}
+                </Typography>
               )}
-            </label>
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setIsModalOpen(false)}>Batal</Button>
+          <Button variant="contained" type="submit">
+            Simpan
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="modal-cancel"
-                onClick={() => setIsModalOpen(false)}
-              >
-                Batal
-              </button>
-              <button type="submit" className="modal-submit">
-                Simpan
-              </button>
-            </div>
-          </form>
-        </section>
-      </div>
+      <Box
+        component="main"
+        sx={(currentTheme) => ({
+          flex: 1,
+          py: { xs: 3, md: 4 },
+          backgroundColor:
+            currentTheme.palette.mode === "dark" ? "#0b111c" : "transparent",
+        })}
+      >
+        <Routes>
+          <Route path="/" element={homeElement} />
+          <Route path="/posts/:id" element={<PostDetail posts={posts} />} />
+          <Route path="*" element={homeElement} />
+        </Routes>
+      </Box>
 
-      <main>
-        <Home
-          posts={pagedPosts}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      </main>
-    </>
+      <Box sx={{ py: 2, textAlign: "center" }}>
+        <Typography variant="caption" color="text.secondary">
+          <Link to="/">Blogging.</Link>
+        </Typography>
+      </Box>
+    </ThemeProvider>
   );
 }
