@@ -16,13 +16,17 @@ import {
   createTheme,
 } from "@mui/material";
 import { Link, Route, Routes } from "react-router-dom";
-import { initialPosts } from "./data/posts";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import PostDetail from "./pages/PostDetail";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
+
 export default function App() {
-  const [posts, setPosts] = useState(initialPosts);
+  const [posts, setPosts] = useState([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [postsError, setPostsError] = useState("");
   const [query, setQuery] = useState("");
   const [isDark, setIsDark] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,9 +36,10 @@ export default function App() {
     title: "",
     author: "",
     content: "",
-    attachment: null,
+    attachments: [],
   });
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [formError, setFormError] = useState("");
 
   const filteredPosts = posts.filter((post) =>
     post.title.toLowerCase().includes(query.toLowerCase())
@@ -48,6 +53,39 @@ export default function App() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadPosts = async () => {
+      try {
+        setIsLoadingPosts(true);
+        setPostsError("");
+        const response = await fetch(`${API_BASE_URL}/posts`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error("Gagal memuat data post.");
+        }
+        const data = await response.json();
+        setPosts(data);
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setPostsError(error.message || "Gagal memuat data post.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingPosts(false);
+        }
+      }
+    };
+
+    loadPosts();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const theme = useMemo(
     () =>
@@ -91,6 +129,8 @@ export default function App() {
       currentPage={currentPage}
       totalPages={totalPages}
       onPageChange={setCurrentPage}
+      isLoading={isLoadingPosts}
+      error={postsError}
     />
   );
 
@@ -103,6 +143,40 @@ export default function App() {
     setCurrentPage(1);
   };
 
+  const getAttachmentKey = (file) =>
+    `${file.name}-${file.size}-${file.lastModified}`;
+
+  const handleAttachmentChange = (event) => {
+    const incoming = Array.from(event.target.files || []);
+    if (incoming.length === 0) {
+      return;
+    }
+
+    const merged = [...draft.attachments, ...incoming];
+    const limited = merged.slice(0, 5);
+
+    if (merged.length > 5) {
+      setFormError("Maksimal 5 attachment. Hanya 5 pertama yang dipakai.");
+    } else {
+      setFormError("");
+    }
+
+    setDraft((prev) => ({ ...prev, attachments: limited }));
+    setFileInputKey((prev) => prev + 1);
+  };
+
+  const handleRemoveAttachment = (targetKey) => {
+    setDraft((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter(
+        (file) => getAttachmentKey(file) !== targetKey
+      ),
+    }));
+    setFormError((prev) =>
+      prev.startsWith("Maksimal 5 attachment") ? "" : prev
+    );
+  };
+
   const handleSubmitDraft = (event) => {
     event.preventDefault();
     const title = draft.title.trim();
@@ -110,24 +184,47 @@ export default function App() {
     const content = draft.content.trim();
 
     if (!title || !author || !content) {
+      setFormError("Judul, author, dan konten wajib diisi.");
       return;
     }
 
-    const newPost = {
-      id: Date.now().toString(),
-      title,
-      author,
-      content,
-      createdAt: new Date().toISOString().slice(0, 10),
-      tags: [],
-      attachment: draft.attachment ? draft.attachment.name : null,
-    };
+    if (draft.attachments.length > 5) {
+      setFormError("Maksimal 5 attachment.");
+      return;
+    }
 
-    setPosts((prevPosts) => [newPost, ...prevPosts]);
-    setCurrentPage(1);
-    setDraft({ title: "", author: "", content: "", attachment: null });
-    setFileInputKey((prev) => prev + 1);
-    setIsModalOpen(false);
+    setFormError("");
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("author", author);
+    formData.append("content", content);
+    draft.attachments.forEach((file) => {
+      formData.append("attachments", file);
+    });
+
+    fetch(`${API_BASE_URL}/posts`, {
+      method: "POST",
+      body: formData,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const message = await response.json().catch(() => null);
+          throw new Error(message?.message || "Gagal menyimpan post.");
+        }
+        return response.json();
+      })
+      .then((savedPost) => {
+        const newPost = { ...savedPost, tags: [] };
+        setPosts((prevPosts) => [newPost, ...prevPosts]);
+        setCurrentPage(1);
+        setDraft({ title: "", author: "", content: "", attachments: [] });
+        setFileInputKey((prev) => prev + 1);
+        setIsModalOpen(false);
+      })
+      .catch((error) => {
+        setFormError(error.message || "Gagal menyimpan post.");
+      });
   };
 
   const lightBackground =
@@ -226,29 +323,51 @@ export default function App() {
             />
             <Stack spacing={1}>
               <Button variant="outlined" component="label">
-                Attachment
+                Attachment (maks 5 file)
                 <input
                   key={fileInputKey}
                   type="file"
                   hidden
-                  onChange={(event) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      attachment: event.target.files?.[0] ?? null,
-                    }))
-                  }
+                  multiple
+                  onChange={handleAttachmentChange}
                 />
               </Button>
               <Typography variant="caption" color="text.secondary">
-                Opsional: lampirkan file.
+                Opsional: pilih hingga 5 file.
               </Typography>
-              {draft.attachment && (
-                <Typography variant="body2">
-                  File: {draft.attachment.name}
-                </Typography>
+              {draft.attachments.length > 0 && (
+                <Stack spacing={0.5}>
+                  {draft.attachments.map((file) => {
+                    const key = getAttachmentKey(file);
+                    return (
+                      <Stack
+                        key={key}
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                      >
+                        <Typography variant="body2" sx={{ flex: 1 }}>
+                          {file.name}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => handleRemoveAttachment(key)}
+                        >
+                          Hapus
+                        </Button>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
               )}
             </Stack>
           </Stack>
+          {formError && (
+            <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={() => setIsModalOpen(false)}>Batal</Button>
@@ -269,7 +388,16 @@ export default function App() {
       >
         <Routes>
           <Route path="/" element={homeElement} />
-          <Route path="/posts/:id" element={<PostDetail posts={posts} />} />
+          <Route
+            path="/posts/:id"
+            element={
+              <PostDetail
+                posts={posts}
+                isLoading={isLoadingPosts}
+                error={postsError}
+              />
+            }
+          />
           <Route path="*" element={homeElement} />
         </Routes>
       </Box>

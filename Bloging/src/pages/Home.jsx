@@ -2,7 +2,34 @@
 import { Box, Container, Pagination, Stack, Typography } from "@mui/material";
 import PostCard from "../components/PostCard";
 
-export default function Home({ posts, currentPage, totalPages, onPageChange }) {
+export default function Home({
+  posts,
+  currentPage,
+  totalPages,
+  onPageChange,
+  isLoading,
+  error,
+}) {
+  if (isLoading) {
+    return (
+      <Container sx={{ py: 4 }}>
+        <Typography align="center" color="text.secondary">
+          Memuat post...
+        </Typography>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container sx={{ py: 4 }}>
+        <Typography align="center" color="error">
+          {error}
+        </Typography>
+      </Container>
+    );
+  }
+
   if (posts.length === 0) {
     return (
       <Container sx={{ py: 4 }}>

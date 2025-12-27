@@ -1,25 +1,62 @@
 // src/pages/PostDetail.jsx
-import { Box, Button, Chip, Container, Stack, Typography } from "@mui/material";
-import { Link, useParams } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Chip,
+  Container,
+  Link as MuiLink,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { Link as RouterLink, useParams } from "react-router-dom";
 
-export default function PostDetail({ posts }) {
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
+const FILE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+
+export default function PostDetail({ posts, isLoading, error }) {
   const { id } = useParams();
   const post = posts.find((item) => item.id === id);
 
-  if (!post) {
+  if (isLoading) {
     return (
       <Container sx={{ py: 4 }}>
-        <Typography align="center">
-          Post tidak ditemukan. <Link to="/">Kembali</Link>
+        <Typography align="center" color="text.secondary">
+          Memuat post...
         </Typography>
       </Container>
     );
   }
 
-  const attachmentLabel =
-    typeof post.attachment === "string"
-      ? post.attachment
-      : post.attachment?.name || "Tidak ada";
+  if (error) {
+    return (
+      <Container sx={{ py: 4 }}>
+        <Typography align="center" color="error">
+          {error}
+        </Typography>
+      </Container>
+    );
+  }
+
+  if (!post) {
+    return (
+      <Container sx={{ py: 4 }}>
+        <Typography align="center">
+          Post tidak ditemukan. <RouterLink to="/">Kembali</RouterLink>
+        </Typography>
+      </Container>
+    );
+  }
+
+  const attachments = post.attachments || [];
+  const resolveUrl = (url) =>
+    url.startsWith("http") ? url : `${FILE_BASE_URL}${url}`;
+  const isImageFile = (file) => {
+    if (file?.mimeType) {
+      return file.mimeType.startsWith("image/");
+    }
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file?.originalName || "");
+  };
 
   return (
     <Container sx={{ maxWidth: "980px" }}>
@@ -40,7 +77,7 @@ export default function PostDetail({ posts }) {
         })}
       >
         <Button
-          component={Link}
+          component={RouterLink}
           to="/"
           variant="contained"
           sx={{
@@ -99,7 +136,58 @@ export default function PostDetail({ posts }) {
           >
             Attachment
           </Typography>
-          <Typography variant="body2">{attachmentLabel}</Typography>
+          {attachments.length > 0 ? (
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+              {attachments.map((file) => {
+                const url = resolveUrl(file.url);
+                const isImage = isImageFile(file);
+                return (
+                  <Box key={file.url} sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                    {isImage ? (
+                      <MuiLink
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        underline="none"
+                        sx={{ display: "inline-flex" }}
+                      >
+                        <Box
+                          component="img"
+                          src={url}
+                          alt={file.originalName}
+                          sx={{
+                            width: 120,
+                            height: 90,
+                            objectFit: "cover",
+                            borderRadius: "12px",
+                            border: "1px solid rgba(255, 255, 255, 0.18)",
+                            boxShadow: "0 10px 20px rgba(8, 37, 74, 0.2)",
+                          }}
+                        />
+                      </MuiLink>
+                    ) : (
+                      <MuiLink
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        color="inherit"
+                        underline="always"
+                      >
+                        {file.originalName}
+                      </MuiLink>
+                    )}
+                    {isImage && (
+                      <Typography variant="caption" sx={{ color: "inherit" }}>
+                        {file.originalName}
+                      </Typography>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+          ) : (
+            <Typography variant="body2">Tidak ada</Typography>
+          )}
         </Stack>
 
         {post.tags?.length > 0 && (
