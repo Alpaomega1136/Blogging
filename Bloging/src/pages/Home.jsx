@@ -14,7 +14,7 @@ export default function Home({
     return (
       <Container sx={{ py: 4 }}>
         <Typography align="center" color="text.secondary">
-          Memuat post...
+          Loading posts...
         </Typography>
       </Container>
     );

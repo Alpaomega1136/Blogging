@@ -1,4 +1,5 @@
 import express from "express";
+import fs from "fs/promises";
 import mongoose from "mongoose";
 import multer from "multer";
 import path from "path";
@@ -29,6 +30,20 @@ const mapPost = (post) => ({
   attachments: post.attachments ?? [],
   createdAt: post.createdAt,
 });
+
+const removeAttachmentFile = async (file) => {
+  if (!file?.filename) {
+    return;
+  }
+
+  try {
+    await fs.unlink(path.join(uploadsDir, file.filename));
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      console.warn("Failed to remove attachment", error);
+    }
+  }
+};
 
 router.get("/", async (req, res, next) => {
   try {
@@ -79,6 +94,27 @@ router.post("/", upload.array("attachments", 5), async (req, res, next) => {
 
     const post = await Post.create({ title, author, content, attachments });
     res.status(201).json(mapPost(post));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid post id" });
+    }
+
+    const post = await Post.findById(id);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    await Promise.all((post.attachments || []).map(removeAttachmentFile));
+    await post.deleteOne();
+
+    res.json({ id });
   } catch (error) {
     next(error);
   }

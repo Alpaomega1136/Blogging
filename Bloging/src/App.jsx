@@ -65,13 +65,13 @@ export default function App() {
           signal: controller.signal,
         });
         if (!response.ok) {
-          throw new Error("Gagal memuat data post.");
+          throw new Error("Failed to load posts.");
         }
         const data = await response.json();
         setPosts(data);
       } catch (error) {
         if (error.name !== "AbortError") {
-          setPostsError(error.message || "Gagal memuat data post.");
+          setPostsError(error.message || "Failed to load posts.");
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -156,7 +156,7 @@ export default function App() {
     const limited = merged.slice(0, 5);
 
     if (merged.length > 5) {
-      setFormError("Maksimal 5 attachment. Hanya 5 pertama yang dipakai.");
+      setFormError("Maximum 5 attachments. Only the first 5 will be used.");
     } else {
       setFormError("");
     }
@@ -173,7 +173,7 @@ export default function App() {
       ),
     }));
     setFormError((prev) =>
-      prev.startsWith("Maksimal 5 attachment") ? "" : prev
+      prev.startsWith("Maximum 5 attachments") ? "" : prev
     );
   };
 
@@ -184,12 +184,12 @@ export default function App() {
     const content = draft.content.trim();
 
     if (!title || !author || !content) {
-      setFormError("Judul, author, dan konten wajib diisi.");
+      setFormError("Title, author, and content are required.");
       return;
     }
 
     if (draft.attachments.length > 5) {
-      setFormError("Maksimal 5 attachment.");
+      setFormError("Maximum 5 attachments.");
       return;
     }
 
@@ -210,7 +210,7 @@ export default function App() {
       .then(async (response) => {
         if (!response.ok) {
           const message = await response.json().catch(() => null);
-          throw new Error(message?.message || "Gagal menyimpan post.");
+          throw new Error(message?.message || "Failed to save post.");
         }
         return response.json();
       })
@@ -223,8 +223,20 @@ export default function App() {
         setIsModalOpen(false);
       })
       .catch((error) => {
-        setFormError(error.message || "Gagal menyimpan post.");
+        setFormError(error.message || "Failed to save post.");
       });
+  };
+
+  const handleDeletePost = async (id) => {
+    const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const message = await response.json().catch(() => null);
+      throw new Error(message?.message || "Failed to delete post.");
+    }
+
+    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== id));
   };
 
   const lightBackground =
@@ -288,12 +300,12 @@ export default function App() {
         }}
       >
         <DialogTitle sx={{ fontFamily: '"Fraunces", "Times New Roman", serif' }}>
-          Buat Post Baru
+          Create New Post
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
-              label="Judul"
+              label="Title"
               value={draft.title}
               onChange={(event) =>
                 setDraft((prev) => ({ ...prev, title: event.target.value }))
@@ -311,7 +323,7 @@ export default function App() {
               fullWidth
             />
             <TextField
-              label="Konten"
+              label="Content"
               value={draft.content}
               onChange={(event) =>
                 setDraft((prev) => ({ ...prev, content: event.target.value }))
@@ -323,7 +335,7 @@ export default function App() {
             />
             <Stack spacing={1}>
               <Button variant="outlined" component="label">
-                Attachment (maks 5 file)
+                Attachments (max 5 files)
                 <input
                   key={fileInputKey}
                   type="file"
@@ -333,7 +345,7 @@ export default function App() {
                 />
               </Button>
               <Typography variant="caption" color="text.secondary">
-                Opsional: pilih hingga 5 file.
+                Optional: select up to 5 files.
               </Typography>
               {draft.attachments.length > 0 && (
                 <Stack spacing={0.5}>
@@ -354,7 +366,7 @@ export default function App() {
                           variant="text"
                           onClick={() => handleRemoveAttachment(key)}
                         >
-                          Hapus
+                          Remove
                         </Button>
                       </Stack>
                     );
@@ -370,9 +382,9 @@ export default function App() {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setIsModalOpen(false)}>Batal</Button>
+          <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
           <Button variant="contained" type="submit">
-            Simpan
+            Save
           </Button>
         </DialogActions>
       </Dialog>
@@ -395,6 +407,7 @@ export default function App() {
                 posts={posts}
                 isLoading={isLoadingPosts}
                 error={postsError}
+                onDeletePost={handleDeletePost}
               />
             }
           />

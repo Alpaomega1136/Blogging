@@ -88,7 +88,7 @@ export default function Navbar({
           <TextField
             fullWidth
             size="small"
-            placeholder="Cari blog..."
+            placeholder="Search posts..."
             value={query}
             onChange={onQueryChange}
             InputProps={{
@@ -129,7 +129,7 @@ export default function Navbar({
             onClick={onOpenModal}
             sx={{
               borderRadius: "999px",
-              textTransform: "lowercase",
+              textTransform: "none",
               fontWeight: 700,
               px: 3,
               backgroundColor: navButtonBg,
@@ -140,7 +140,7 @@ export default function Navbar({
               },
             }}
           >
-            new post
+            New Post
           </Button>
         </Box>
       </Toolbar>

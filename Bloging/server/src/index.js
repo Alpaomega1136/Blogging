@@ -29,7 +29,7 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   if (error?.code === "LIMIT_FILE_COUNT") {
-    return res.status(400).json({ message: "Maksimal 5 attachment." });
+    return res.status(400).json({ message: "Maximum 5 attachments." });
   }
   if (error?.name === "MulterError") {
     return res.status(400).json({ message: error.message });

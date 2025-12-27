@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 export default function PostCard({ post }) {
   const hasTags = post.tags?.length > 0;
   const detailPath = `/posts/${post.id}`;
-  const actionLabel = post.linkLabel || "Baca Selengkapnya";
+  const actionLabel = post.linkLabel || "Read More";
   const maxWords = 40;
   const content = post.content ?? "";
   const words = content.trim().split(/\s+/).filter(Boolean);
